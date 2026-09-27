@@ -91,6 +91,13 @@ const postsSlice = createSlice({
     deletePost: postsAdapter.removeOne,
     clearPosts: postsAdapter.removeAll,
     setPosts: postsAdapter.setAll,
+    addSamplePosts: (state, action) => {
+      postsAdapter.addMany(state, action.payload);
+    },
+    clearSamplePosts: (state) => {
+      const sampleIds = state.ids.filter(id => String(id).startsWith('sample-'));
+      postsAdapter.removeMany(state, sampleIds);
+    },
     updatePostStatus: (state, action) => {
       const { id, status } = action.payload;
       postsAdapter.updateOne(state, {
@@ -165,6 +172,8 @@ export const {
   deletePost,
   clearPosts,
   setPosts,
+  addSamplePosts,
+  clearSamplePosts,
   updatePostStatus
 } = postsSlice.actions;
 

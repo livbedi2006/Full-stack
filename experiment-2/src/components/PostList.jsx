@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { selectAllPosts } from '../features/posts/postsSlice';
-import { selectAllPlatforms } from '../features/platforms/platformsSlice';
+import { selectAllPosts, selectFilteredPosts } from '../selectors/postSelectors';
+import { selectAllPlatforms } from '../selectors/platformSelectors';
 import PostCard from './PostCard';
 import { SearchIcon, XIcon } from './Icons';
 
@@ -9,8 +9,9 @@ import { SearchIcon, XIcon } from './Icons';
  * PostList Component (Experiment 2)
  * 
  * Demonstrates:
- * 1. useSelector: Reads all posts directly from Redux normalized store.
- * 2. Client-side Search and Filtering across normalized entity relationships.
+ * 1. selectFilteredPosts: Uses memoized selector (createSelector / Reselect)
+ *    rather than filtering directly inside the component on every render!
+ * 2. Pure Derived State: Filtered posts are derived on the fly without duplicating in Redux.
  */
 export default function PostList({ onEditPost }) {
   const posts = useSelector(selectAllPosts);
@@ -20,29 +21,16 @@ export default function PostList({ onEditPost }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
 
-  // Filtered posts derived via useMemo
-  const filteredPosts = useMemo(() => {
-    return posts.filter((post) => {
-      // 1. Text Search
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesContent = post.content?.toLowerCase().includes(query);
-        if (!matchesContent) return false;
-      }
+  // Input filter criteria memoized for selector stability
+  const filterCriteria = useMemo(() => ({
+    searchTerm: searchQuery,
+    status: statusFilter,
+    platform: platformFilter,
+    sortBy: 'newest'
+  }), [searchQuery, statusFilter, platformFilter]);
 
-      // 2. Status Filter
-      if (statusFilter !== 'all') {
-        if (post.status !== statusFilter) return false;
-      }
-
-      // 3. Platform Filter
-      if (platformFilter !== 'all') {
-        if (!post.platformIds?.includes(platformFilter)) return false;
-      }
-
-      return true;
-    });
-  }, [posts, searchQuery, statusFilter, platformFilter]);
+  // Read filtered posts derived via createSelector
+  const filteredPosts = useSelector((state) => selectFilteredPosts(state, filterCriteria));
 
   const clearFilters = () => {
     setSearchQuery('');

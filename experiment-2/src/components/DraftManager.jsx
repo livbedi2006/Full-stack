@@ -9,7 +9,7 @@ import {
   selectDraftsOperationLoading
 } from '../features/drafts/draftsSlice';
 import { selectAllPlatforms } from '../features/platforms/platformsSlice';
-import { EditIcon, TrashIcon, RocketIcon, PlusIcon, SpinnerIcon, PlatformIcon, CheckIcon } from './Icons';
+import { EditIcon, TrashIcon, RocketIcon, SpinnerIcon, PlatformIcon, CheckIcon } from './Icons';
 
 /**
  * DraftManager Component (Experiment 2)

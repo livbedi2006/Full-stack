@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import PostManager from './components/PostManager';
 import DraftManager from './components/DraftManager';
 import PlatformList from './components/PlatformList';
+import PerformanceDashboard from './components/PerformanceDashboard';
 
 /**
  * Main Application Component (Experiment 2)
@@ -20,6 +21,8 @@ import PlatformList from './components/PlatformList';
  *    Initializes normalized posts, platforms, and drafts via createAsyncThunk.
  * 2. Zero Prop Drilling:
  *    Components read and modify data directly via useSelector and useDispatch!
+ * 3. Performance Optimization Module:
+ *    Demonstrating memoized selectors, derived state, and render optimizations.
  */
 export default function App() {
   const dispatch = useDispatch();
@@ -43,6 +46,7 @@ export default function App() {
         {activeTab === 'posts' && <PostManager />}
         {activeTab === 'drafts' && <DraftManager />}
         {activeTab === 'platforms' && <PlatformList />}
+        {activeTab === 'performance' && <PerformanceDashboard />}
       </main>
 
       {/* Academic Experiment Footer */}

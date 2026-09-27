@@ -263,3 +263,169 @@ npm run build
 2. **Normalized Data**: Posts and drafts reference platforms by ID (`platformIds: ['twitter', 'linkedin']`), with full platform entities joined on-the-fly via memoized selectors.
 3. **Automatic UI Reactivity**: Adding, updating, or deleting a post instantly updates the navbar counter, dashboard metrics, and platform distribution charts without manual state synchronizations.
 4. **Async Lifecycle Feedback**: Operations display loading spinners during simulated network latency and handle failures with retry mechanisms.
+
+---
+
+## Performance Optimization Using Memoized Selectors
+
+### Aim
+To optimize state access and improve application performance using memoized selectors (`createSelector` / Reselect) and efficient rendering strategies (`React.memo`, `useMemo`, `useCallback`).
+
+### Objectives
+1. Understand the concept of **derived state** and why derived values should never be duplicated as separate Redux state slices.
+2. Implement memoized selectors using `createSelector` from `@reduxjs/toolkit` (Reselect).
+3. Reduce unnecessary component re-renders using granular `useSelector` subscriptions and `React.memo`.
+4. Demonstrate high performance in large-scale applications with large in-memory datasets (500+ items).
+5. Use efficient Redux state access patterns, avoiding monolithic store selections (`state => state`).
+6. Measure and demonstrate the difference between basic selectors and memoized selectors with real recomputation telemetry.
+
+### The Redux Performance Data Flow
+```text
+┌────────────────────────────────────────────────────────┐
+│                      Redux Store                       │
+│             (Normalized Entity Lookup Tables)          │
+└────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│                    Input Selectors                     │
+│      (selectAllPosts, selectAllPlatforms, etc.)        │
+└────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│             createSelector (Reselect Cache)            │
+│  - Checks referential equality of input arguments      │
+│  - Returns cached reference if inputs unchanged [O(1)] │
+│  - Executes result function only on input mutations    │
+└────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│                     Derived State                      │
+│ (Filtered Posts, Platform Grouping, Post Analytics)   │
+└────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│                    React Component                     │
+│      (MemoizedPostCard, SelectorStats, Dashboard)      │
+└────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│                  Optimized Rendering                   │
+│   (React.memo skips render if props shallowly equal)   │
+└────────────────────────────────────────────────────────┘
+```
+
+### Derived State
+**Derived state** is any data that can be calculated from existing raw state.
+Examples include:
+- `totalPosts = posts.length`
+- `publishedPosts = posts.filter(p => p.status === 'published')`
+- `averageCharacterCount = Math.round(totalCharacters / posts.length)`
+- `validPosts = posts.filter(p => p.content.length <= platformLimit)`
+
+#### Why Derived State Should NOT be Duplicated in Redux:
+1. **Synchronization Hazards**: If you store `postCount` or `filteredPosts` as separate slice fields, every add, edit, or delete action must remember to manually update them. Missing a single dispatch causes state divergence.
+2. **State Bloat**: Caching duplicate arrays (like full copies of filtered posts) balloons memory usage unnecessarily.
+3. **Complex Reducers**: Reducers become bloated with repetitive arithmetic and filter logic.
+4. **Reselect Advantage**: Memoized selectors calculate derived data on-the-fly and cache the result. When raw state doesn't change, the derivation costs virtually zero execution time!
+
+### Memoization
+Memoization is an optimization technique where a function caches the result of an expensive calculation based on its inputs. If the function is called again with the identical inputs, it bypasses the calculation and returns the cached result immediately.
+
+### createSelector & Reselect
+`createSelector` (provided by `@reduxjs/toolkit` and built upon **Reselect**) generates memoized selector functions:
+- It accepts one or more **input selectors** and a **result computation function**.
+- It uses shallow reference equality (`===`) to determine whether input selectors returned new values.
+- If and only if an input selector returns a new reference, the result function executes and the internal recomputation counter increments.
+- Otherwise, it immediately returns the memoized output reference.
+
+Example implemented in `src/selectors/postSelectors.js`:
+```javascript
+export const selectPublishedPosts = createSelector(
+  [selectAllPosts],
+  (posts) => posts.filter((p) => p.status === 'published')
+);
+```
+
+### Advanced Multi-Input Selectors
+In `src/selectors/postSelectors.js`, `selectPostsAndPlatforms` combines posts with platforms to evaluate platform-specific character limits without saving any validation flags in the database:
+```javascript
+export const selectPostsAndPlatforms = createSelector(
+  [selectAllPosts, selectPlatformMap],
+  (posts, platformMap) => {
+    return posts.map((post) => {
+      const platforms = (post.platformIds || []).map((id) => platformMap.get(id)).filter(Boolean);
+      const charCount = post.content ? post.content.length : 0;
+      const isValid = platforms.length > 0 && platforms.every((p) => charCount <= p.characterLimit);
+      return { ...post, charCount, platforms, isValid };
+    });
+  }
+);
+```
+
+### React.memo
+`React.memo` is a higher-order component that memoizes functional components:
+- If a parent component re-renders (for example, due to unrelated search input typing or theme toggles), child components wrapped in `React.memo` will **not** re-render if their props remain shallowly equal (`prevProps === nextProps`).
+- In this project, `MemoizedPostCard` is wrapped with `React.memo`, preventing unchanged post cards from re-rendering when sibling items update or unrelated UI state toggles.
+
+### useMemo
+`useMemo` is used for expensive calculations that are strictly local to a component:
+- In `PerformanceDashboard.jsx`, `useMemo` is utilized to compute the paginated view window (`paginatedPosts = filteredPosts.slice(start, start + pageSize)`) based on `currentPage`.
+- It avoids unnecessary array slicing on re-renders when neither the page nor the filtered list changed.
+
+### useCallback
+When passing callback functions to child components wrapped in `React.memo`, normal inline functions create new memory references on every render, which inadvertently breaks `React.memo`.
+- `useCallback` caches the function reference:
+```javascript
+const handleStatusChange = useCallback((id, status) => {
+  dispatch(updatePostStatus({ id, status }));
+}, [dispatch]);
+```
+This ensures the props passed to `MemoizedPostCard` maintain referential equality across parent renders.
+
+### Efficient useSelector Patterns
+**Avoid this anti-pattern:**
+```javascript
+// BAD: Subscribes to the entire Redux store!
+const state = useSelector((state) => state);
+```
+Subscribing to the root state causes the component to re-render whenever ANY slice of state in the entire application changes.
+
+**Adopt specific, targeted selectors:**
+```javascript
+// GOOD: Subscribes ONLY to normalized posts array
+const posts = useSelector(selectAllPosts);
+
+// GOOD: Subscribes ONLY to derived analytics
+const analytics = useSelector(selectPostAnalytics);
+```
+
+### Avoiding Unnecessary Re-renders
+Across the codebase, re-renders are minimized through:
+1. **Targeted Subscriptions**: Selecting narrow entity slices.
+2. **Stable Selector Outputs**: Memoized selectors returning identical array references unless the underlying data mutates.
+3. **Presentational Component Memoization**: Wrapping card components in `React.memo`.
+4. **Stable Handlers**: Preserving event handler references with `useCallback`.
+
+### Selector Recomputation Telemetry
+The application includes live recomputation telemetry (`SelectorStats.jsx`):
+- Tracks actual invocations of each selector's result function.
+- An interactive **"Toggle Unrelated UI State"** button proves memoization in action:
+  - Clicking the button triggers a component re-render (monitored by `RenderMonitor`).
+  - The selector recomputation counters **remain completely frozen**, proving that the memoized cache intercepted the request and returned the cached result in $O(1)$ time.
+
+### Large Dataset Optimization (500+ Items Benchmark)
+To demonstrate performance under real-world conditions:
+- **"Generate 500 Sample Posts"** dispatches batch entities via `postsAdapter.addMany` into normalized state in milliseconds without blocking the browser.
+- **Client-Side Pagination**: Windowed rendering (12 items per page) avoids flooding the browser DOM with 500+ heavy elements simultaneously.
+- **Instant Search & Sort**: Memoized filtering over 500 items operates smoothly with zero UI lag.
+- **"Clear Sample Data"**: Safely strips out sample records while preserving custom user posts.
+
+### Performance Verification Summary
+- **No Console Errors**: Clean browser execution verified via automated browser subagents.
+- **Full Backward Compatibility**: All base Experiment 2 features (Posts CRUD, Drafts CRUD, Platforms, Thunks, Mock API) remain 100% operational.
+

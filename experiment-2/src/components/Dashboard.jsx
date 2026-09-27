@@ -19,8 +19,6 @@ export default function Dashboard({ onNavigateTab }) {
     totalDrafts,
     totalPlatforms,
     publishedCount,
-    draftStatusCount,
-    scheduledCount,
     platformDistribution = {},
     recentPosts = []
   } = stats;
@@ -136,6 +134,15 @@ export default function Dashboard({ onNavigateTab }) {
             >
               <RocketIcon size={14} />
               <span>Manage Drafts ({totalDrafts})</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-perf-launch btn-sm"
+              onClick={() => onNavigateTab('performance')}
+              title="Open Memoized Selectors & Performance Dashboard"
+            >
+              <span>⚡ Performance & Selectors</span>
             </button>
           </div>
 

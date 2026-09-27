@@ -87,6 +87,20 @@ export default function Navbar({ activeTab, onSelectTab }) {
               {platformCount}
             </span>
           </button>
+
+          <button
+            type="button"
+            className={`nav-btn nav-btn-perf ${activeTab === 'performance' ? 'active' : ''}`}
+            onClick={() => onSelectTab('performance')}
+            role="tab"
+            aria-selected={activeTab === 'performance'}
+          >
+            <span className="perf-dot">⚡</span>
+            <span>Performance</span>
+            <span className="nav-counter perf-counter" title="Memoized Selectors & Benchmarks">
+              Opt
+            </span>
+          </button>
         </nav>
       </div>
     </header>

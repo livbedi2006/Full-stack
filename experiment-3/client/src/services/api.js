@@ -133,3 +133,65 @@ export async function fetchAdminConsoleApi(customToken) {
     ...(customToken !== undefined ? { token: customToken } : {})
   });
 }
+
+/**
+ * RBAC Module Endpoints
+ */
+export async function fetchDashboardApi(customToken) {
+  return request('/protected/dashboard', {
+    method: 'GET',
+    ...(customToken !== undefined ? { token: customToken } : {})
+  });
+}
+
+export async function fetchPostsApi(customToken) {
+  return request('/protected/posts', {
+    method: 'GET',
+    ...(customToken !== undefined ? { token: customToken } : {})
+  });
+}
+
+export async function createPostApi(postData, customToken) {
+  return request('/protected/posts', {
+    method: 'POST',
+    body: JSON.stringify(postData),
+    ...(customToken !== undefined ? { token: customToken } : {})
+  });
+}
+
+export async function updatePostApi(id, postData, customToken) {
+  return request(`/protected/posts/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(postData),
+    ...(customToken !== undefined ? { token: customToken } : {})
+  });
+}
+
+export async function deletePostApi(id, customToken) {
+  return request(`/protected/posts/${id}`, {
+    method: 'DELETE',
+    ...(customToken !== undefined ? { token: customToken } : {})
+  });
+}
+
+export async function fetchAnalyticsApi(customToken) {
+  return request('/protected/analytics', {
+    method: 'GET',
+    ...(customToken !== undefined ? { token: customToken } : {})
+  });
+}
+
+export async function fetchUsersApi(customToken) {
+  return request('/protected/users', {
+    method: 'GET',
+    ...(customToken !== undefined ? { token: customToken } : {})
+  });
+}
+
+export async function fetchSettingsApi(customToken) {
+  return request('/protected/settings', {
+    method: 'GET',
+    ...(customToken !== undefined ? { token: customToken } : {})
+  });
+}
+

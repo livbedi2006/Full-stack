@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { loginApi, verifySessionApi } from '../services/api';
+import { hasPermission } from '../config/roles';
 
 /**
  * ============================================================================
@@ -166,14 +167,19 @@ export function AuthProvider({ children }) {
   // Helper to clear any session expiry banner
   const clearSessionNotice = () => setSessionNotice(null);
 
+  const role = user?.role ? user.role.toLowerCase() : null;
+
   const value = {
     user,
     token,
+    role,
     decodedToken: parseJwt(token),
     isAuthenticated: Boolean(token && user),
     isLoading,
     sessionNotice,
     clearSessionNotice,
+    can: (permission) => (role ? hasPermission(role, permission) : false),
+    hasPermission: (permission) => (role ? hasPermission(role, permission) : false),
     login,
     logout
   };
